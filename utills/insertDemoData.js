@@ -308,6 +308,7 @@ async function main() {
       const title = `${categoryName} - ${
         cleanedImagePath.split("/").pop().split(".")[0]
       }`;
+    const githubUrl = `https://raw.githubusercontent.com/ajaykumarsaini231/server/refs/heads/main/public/${cleanedImagePath}`;
 
       const product = await prisma.product.create({
         data: {
@@ -315,7 +316,7 @@ async function main() {
           slug: `${title
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-")}-${uuidv4().slice(0, 6)}`,
-          mainImage: cleanedImagePath,
+          mainImage: githubUrl,
           price: Math.floor(Math.random() * 500) + 299,
           rating: Math.floor(Math.random() * 3) + 3,
           description: `A high-quality product from the ${categoryName} collection.`,
@@ -325,7 +326,7 @@ async function main() {
            images: {
           create: [
             {
-              image: cleanedImagePath, // 👈 sirf current image save karega
+              image: githubUrl, // chnage to cleanedImagePath when you are on your local machine..
             },
           ],
         },

@@ -26,11 +26,19 @@ router.get("/email/:email", getUserByEmail);
  * - Requires a valid token
  */
 router.get("/profile", identifier, getCurrentUser);
+// router.get("/profile",  getCurrentUser);
 
 /**
  * 🧩 Admin-only Routes
  * - Requires admin token (role: "admin")
  */
+
+
+// router.get("/",  getAllUsers);
+// router.get("/:id",  getUser);
+// router.put("/:id",  updateUser);
+// router.delete("/:id",  deleteUser);
+
 router.get("/", adminIdentifier, getAllUsers);
 router.get("/:id", adminIdentifier, getUser);
 router.put("/:id", adminIdentifier, updateUser);
