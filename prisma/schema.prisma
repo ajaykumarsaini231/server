@@ -1,0 +1,163 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id             String                   @id @default(uuid())
+  slug           String                   @unique
+  title          String
+  mainImage      String
+  price          Int                      @default(0)
+  rating         Int                      @default(0)
+  description    String
+  manufacturer   String
+  inStock        Int                      @default(1)
+
+  categoryId     String
+  category       Category                 @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  customerOrders customer_order_product[]
+  Wishlist       Wishlist[]
+  Cart           Cart[]
+
+  // ✅ Add relation: one Product has many Images
+  images         Image[]
+}
+
+model Image {
+  imageID   String   @id @default(uuid())
+  image     String
+
+  // ✅ Relation back to Product
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+
+model User {
+  id                          String   @id @default(uuid())
+  name                        String?
+  email                       String   @unique
+  password                    String?
+  role                        String   @default("user")
+
+  verified                    Boolean  @default(false)
+  verificationCode            String?
+  verificationCodeValidation  DateTime?
+  forgotPasswordCode          String?
+  forgotPasswordCodeValidation DateTime?
+
+  photoUrl                    String?
+
+  Wishlist   Wishlist[]
+  Cart       Cart[]
+  addresses  Address[]
+  orders     Customer_order[]     // ✅ one user has many orders
+}
+
+
+model Cart {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+model Customer_order {
+  id          String                   @id @default(uuid())
+  userId      String?                  // 👈 make optional temporarily
+  user        User?                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  lastname    String
+  phone       String
+  email       String
+  company     String
+  adress      String
+  apartment   String
+  postalCode  String
+  dateTime    DateTime?                @default(now())
+  status      String
+  city        String
+  country     String
+  orderNotice String?
+  total       Int
+
+  products    customer_order_product[]
+}
+
+
+
+model customer_order_product {
+  id              String         @id @default(uuid())
+  customerOrder   Customer_order @relation(fields: [customerOrderId], references: [id])
+  customerOrderId String
+  product         Product        @relation(fields: [productId], references: [id])
+  productId       String
+  quantity        Int
+}
+
+model Category {
+  id       String    @id @default(uuid())
+  name     String    @unique
+  products Product[] // Define a one-to-many relationship
+}
+
+model Wishlist {
+  id        String  @id @default(uuid())
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  @@unique([userId, productId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  subject   String?
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model Newsletter {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Address {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  lastname     String
+  address      String
+  city         String
+  postalCode   String
+  country      String
+  phone        String?
+  isDefault    Boolean  @default(false)
+
+  // Relations
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
