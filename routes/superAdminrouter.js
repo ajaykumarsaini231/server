@@ -1,123 +1,53 @@
+// routes/superAdminRouter.js
 const express = require("express");
 const { adminIdentifier } = require("../middleware/adminIdentifier.js");
-
-// 👥 User Controllers
+const { getAdminStats, getRecentOrders } = require("../controllers/adminStats");
 const {
-  getUser,
-  updateUser,
-  deleteUser,
-  getAllUsers,
+  getUser, updateUser, deleteUser, getAllUsers,
 } = require("../controllers/users");
-
-// 📦 Product Controllers
 const {
-  createProduct,
-  updateProduct,
-  deleteProduct,
+  createProduct, updateProduct, deleteProduct,
 } = require("../controllers/products");
-
-// 🖼️ Product Image Controllers
 const {
-  createImage,
-  updateImage,
-  deleteImage,
+  createImage, updateImage, deleteImage,
 } = require("../controllers/productImages");
-
-// 🛒 Order Controllers
 const {
-  getAllOrders,
-  updateCustomerOrder,
-  deleteCustomerOrder,
+  getAllOrders, updateCustomerOrder, deleteCustomerOrder,
 } = require("../controllers/customer_orders");
-
-// 💬 Message Controllers
 const { getMessages } = require("../controllers/message.js");
-
-// 💖 Wishlist Controllers
 const { getAllWishlist } = require("../controllers/wishlist");
 
 const router = express.Router();
 
-// 🧱 Protect all routes — only admins/superadmins allowed
+// ✅ Protect all admin routes
 router.use(adminIdentifier);
 
-/**
- * ===========================================
- * 👥 USER MANAGEMENT
- * ===========================================
- */
+// 📊 Admin Dashboard Stats
+router.get("/stats", getAdminStats);
+router.get("/recent-orders", getRecentOrders);
 
-// Get all users
+// 👥 Users
 router.get("/users", getAllUsers);
+router.route("/users/:id").get(getUser).put(updateUser).delete(deleteUser);
 
-// Get single user / Update user / Delete user
-router
-  .route("/users/:id")
-  .get(getUser)
-  .put(updateUser)
-  .delete(deleteUser);
-
-/**
- * ===========================================
- * 📦 PRODUCT MANAGEMENT
- * ===========================================
- */
-
-// Create new product
+// 📦 Products
 router.post("/products", createProduct);
-
-// Update product
 router.put("/products/:id", updateProduct);
-
-// Delete product
 router.delete("/products/:id", deleteProduct);
 
-/**
- * ===========================================
- * 🖼️ PRODUCT IMAGE MANAGEMENT
- * ===========================================
- */
-
-// Create new image
+// 🖼️ Product Images
 router.post("/product-images", createImage);
-
-// Update image
 router.put("/product-images/:id", updateImage);
-
-// Delete image
 router.delete("/product-images/:id", deleteImage);
 
-/**
- * ===========================================
- * 🛒 ORDER MANAGEMENT
- * ===========================================
- */
-
-// Get all orders
+// 🛒 Orders
 router.get("/orders", getAllOrders);
+router.route("/orders/:id").put(updateCustomerOrder).delete(deleteCustomerOrder);
 
-// Update/Delete order
-router
-  .route("/orders/:id")
-  .put(updateCustomerOrder)
-  .delete(deleteCustomerOrder);
-
-/**
- * ===========================================
- * 💬 MESSAGES MANAGEMENT
- * ===========================================
- */
-
-// Get all customer messages
+// 💬 Messages
 router.get("/messages", getMessages);
 
-/**
- * ===========================================
- * 💖 WISHLIST MANAGEMENT
- * ===========================================
- */
-
-// Get all wishlists (admin overview)
+// 💖 Wishlist
 router.get("/wishlist", getAllWishlist);
 
 module.exports = router;

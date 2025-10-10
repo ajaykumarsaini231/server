@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
-export default prisma;
 
 /**
  * 🧾 Get all addresses for a user
@@ -14,7 +13,7 @@ export const getAddressesByUserId = async (req, res) => {
       orderBy: { createdAt: "desc" },
     });
 
-    res.status(200).json(addresses);
+    res.status(200).json({ addresses });
   } catch (error) {
     console.error("❌ Error fetching addresses:", error);
     res.status(500).json({ message: "Failed to fetch addresses" });
@@ -22,17 +21,30 @@ export const getAddressesByUserId = async (req, res) => {
 };
 
 /**
- * ➕ Add a new address
+ * ➕ Create a new address
  */
 export const createAddress = async (req, res) => {
   try {
-    const { userId, name, lastname, address, city, postalCode, country, phone, isDefault } = req.body;
+    const {
+      userId,
+      name = "",
+      lastname = "",
+      company = "",
+      phone = "",
+      address = "",
+      apartment = "",
+      city = "",
+      postalCode = "",
+      country = "",
+      orderNotice = "",
+      isDefault = false,
+    } = req.body;
 
-    if (!userId || !address || !city || !postalCode || !country) {
-      return res.status(400).json({ message: "Missing required fields" });
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required" });
     }
 
-    // if new address is default, unset others
+    // 🟢 Unset other defaults if this one is default
     if (isDefault) {
       await prisma.address.updateMany({
         where: { userId },
@@ -41,7 +53,20 @@ export const createAddress = async (req, res) => {
     }
 
     const newAddress = await prisma.address.create({
-      data: { userId, name, lastname, address, city, postalCode, country, phone, isDefault: !!isDefault },
+      data: {
+        userId,
+        name,
+        lastname,
+        company,
+        phone,
+        address,
+        apartment,
+        city,
+        postalCode,
+        country,
+        orderNotice,
+        isDefault,
+      },
     });
 
     res.status(201).json(newAddress);
@@ -52,9 +77,8 @@ export const createAddress = async (req, res) => {
 };
 
 /**
- * ✏️ Update address
+ * ✏️ Update an existing address
  */
-
 export const updateAddress = async (req, res) => {
   try {
     const { id } = req.params;
@@ -65,16 +89,13 @@ export const updateAddress = async (req, res) => {
       return res.status(404).json({ message: "Address not found" });
     }
 
-    // 🟢 If this address is being set as default
-    if (isDefault) {
-      // Unset default for all other addresses of the same user
+    if (isDefault && userId) {
       await prisma.address.updateMany({
         where: { userId, NOT: { id } },
         data: { isDefault: false },
       });
     }
 
-    // Update the current address
     const updated = await prisma.address.update({
       where: { id },
       data: { ...data, isDefault },
@@ -87,14 +108,12 @@ export const updateAddress = async (req, res) => {
   }
 };
 
-
 /**
  * 🗑️ Delete address
  */
 export const deleteAddress = async (req, res) => {
   try {
     const { id } = req.params;
-
     await prisma.address.delete({ where: { id } });
     res.status(200).json({ message: "Address deleted successfully" });
   } catch (error) {

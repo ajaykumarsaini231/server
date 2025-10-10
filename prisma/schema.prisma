@@ -96,7 +96,7 @@ model Customer_order {
   lastname    String
   phone       String
   email       String
-  company     String
+  company     String?
   adress      String
   apartment   String
   postalCode  String
@@ -156,16 +156,17 @@ model Address {
   userId       String
   name         String
   lastname     String
+  company      String?
   address      String
   city         String
   postalCode   String
   country      String
   phone        String?
   isDefault    Boolean  @default(false)
-
+  apartment    String?
   // Relations
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  orderNotice  String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

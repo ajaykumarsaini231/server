@@ -12,6 +12,7 @@ const {
   getAllUsers, 
   getUserByEmail,
   getCurrentUser,
+  updateCurrentUser,
 } = require('../controllers/users');
 
 /**
@@ -24,15 +25,11 @@ router.get("/email/:email", getUserByEmail);
 /**
  * 🧩 Authenticated User Routes
  * - Requires a valid token
- */
-router.get("/profile", identifier, getCurrentUser);
-// router.get("/profile",  getCurrentUser);
+//  */
+router.get("/currnet/:userId", identifier, getCurrentUser);
+// router.get("/", identifier, getCurrentUser);
 
-/**
- * 🧩 Admin-only Routes
- * - Requires admin token (role: "admin")
- */
-
+router.put("/me", identifier, updateCurrentUser);
 
 // router.get("/",  getAllUsers);
 // router.get("/:id",  getUser);

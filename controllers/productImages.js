@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 async function getSingleProductImages(request, response) {
   const { id } = request.params;
   const images = await prisma.image.findMany({
-    where: { productID: id },
+    where: { productId: id },
   });
   if (!images) {
     return response.json({ error: "Images not found" }, { status: 404 });
@@ -14,10 +14,10 @@ async function getSingleProductImages(request, response) {
 
 async function createImage(request, response) {
   try {
-    const { productID, image } = request.body;
+    const { productId, image } = request.body;
     const createImage = await prisma.image.create({
       data: {
-        productID,
+        productId,
         image,
       },
     });
@@ -31,12 +31,12 @@ async function createImage(request, response) {
 async function updateImage(request, response) {
   try {
     const { id } = request.params; // Getting product id from params
-    const { productID, image } = request.body;
+    const { productId, image } = request.body;
 
     // Checking whether photo exists for the given product id
     const existingImage = await prisma.image.findFirst({
       where: {
-        productID: id, // Finding photo with a product id
+        productId: id, // Finding photo with a product id
       },
     });
 
@@ -53,7 +53,7 @@ async function updateImage(request, response) {
         imageID: existingImage.imageID, // Using imageID of the found existing image
       },
       data: {
-        productID: productID,
+        productId: productId,
         image: image,
       },
     });
@@ -70,7 +70,7 @@ async function deleteImage(request, response) {
     const { id } = request.params;
     await prisma.image.deleteMany({
       where: {
-        productID: String(id), // Converting id to string
+        productId: String(id), // Converting id to string
       },
     });
     return response.status(204).send();

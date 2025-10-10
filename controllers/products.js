@@ -259,7 +259,9 @@ const getAllProductsOld = asyncHandler(async (request, response) => {
   response.status(200).json(products);
 });
 
+// Create a new product
 const createProduct = asyncHandler(async (request, response) => {
+    console.log(request.body)
   const {
     slug,
     title,
@@ -269,11 +271,18 @@ const createProduct = asyncHandler(async (request, response) => {
     manufacturer,
     categoryId,
     inStock,
+    images, // Array of image URLs from frontend
   } = request.body;
+
+     console.log(request.body.title)
+
 
   // Basic validation
   if (!title || !slug || !price || !categoryId) {
-    throw new AppError("Missing required fields: title, slug, price, and categoryId are required", 400);
+    throw new AppError(
+      "Missing required fields: title, slug, price, and categoryId are required",
+      400
+    );
   }
 
   const product = await prisma.product.create({
@@ -287,12 +296,17 @@ const createProduct = asyncHandler(async (request, response) => {
       manufacturer,
       categoryId,
       inStock,
+      images: {
+        create: images?.map((img) => ({ image: img.image })) || [], // create multiple images
+      },
     },
+    include: { images: true }, // return created images as well
   });
+
   return response.status(201).json(product);
 });
 
-// Method for updating existing product
+// Update an existing product
 const updateProduct = asyncHandler(async (request, response) => {
   const { id } = request.params;
   const {
@@ -300,51 +314,62 @@ const updateProduct = asyncHandler(async (request, response) => {
     title,
     mainImage,
     price,
-    rating,
+    rating = 0,
     description,
     manufacturer,
     categoryId,
-    inStock,
+    inStock = 0,
+    images = [],
   } = request.body;
 
-  // Basic validation
-  if (!id) {
-    throw new AppError("Product ID is required", 400);
-  }
+  if (!id) throw new AppError("Product ID is required", 400);
 
-  // Finding a product by id
+  // Ensure the product exists
   const existingProduct = await prisma.product.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
+    include: { images: true },
   });
 
-  if (!existingProduct) {
-    throw new AppError("Product not found", 404);
+  if (!existingProduct) throw new AppError("Product not found", 404);
+
+  // Validate category exists (optional, prevents FK issues)
+  if (categoryId) {
+    const categoryExists = await prisma.category.findUnique({
+      where: { id: categoryId },
+    });
+    if (!categoryExists) throw new AppError("Category not found", 404);
   }
 
-  // Updating found product
+  // Ensure images are in proper format
+  const validImages = Array.isArray(images)
+    ? images.filter(img => img?.image).map(img => ({ image: img.image }))
+    : [];
+
   const updatedProduct = await prisma.product.update({
-    where: {
-      id,
-    },
+    where: { id },
     data: {
-      title: title,
-      mainImage: mainImage,
-      slug: slug,
-      price: price,
-      rating: rating,
-      description: description,
-      manufacturer: manufacturer,
-      categoryId: categoryId,
-      inStock: inStock,
+      title,
+      mainImage,
+      slug,
+      price,
+      rating,
+      description,
+      manufacturer,
+      categoryId,
+      inStock,
+      images: {
+        deleteMany: {}, // remove existing images
+        create: validImages, // add new images
+      },
     },
+    include: { images: true },
   });
 
   return response.status(200).json(updatedProduct);
 });
 
-// Method for deleting a product
+
+// Delete a product
 const deleteProduct = asyncHandler(async (request, response) => {
   const { id } = request.params;
 
@@ -354,22 +379,24 @@ const deleteProduct = asyncHandler(async (request, response) => {
 
   // Check for related records in order_product table
   const relatedOrderProductItems = await prisma.customer_order_product.findMany({
-    where: {
-      productId: id,
-    },
+    where: { productId: id },
   });
-  
-  if(relatedOrderProductItems.length > 0){
-    throw new AppError("Cannot delete product because of foreign key constraint", 400);
+
+  if (relatedOrderProductItems.length > 0) {
+    throw new AppError(
+      "Cannot delete product because of foreign key constraint",
+      400
+    );
   }
 
+  // Delete product (images will be deleted automatically due to cascade)
   await prisma.product.delete({
-    where: {
-      id,
-    },
+    where: { id },
   });
+
   return response.status(204).send();
 });
+
 
 const searchProducts = asyncHandler(async (request, response) => {
   const { query } = request.query;
@@ -447,6 +474,125 @@ const getProductsByCategoryId = asyncHandler(async (request, response) => {
 
   return response.status(200).json(products);
 });
+const getProductList = asyncHandler(async (req, res) => {
+  try {
+    const { inStockOnly } = req.query;
+
+    const whereClause = inStockOnly === "true" ? { inStock: { gt: 0 } } : {};
+
+    const products = await prisma.product.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        mainImage: true,
+        inStock: true,
+        category: {           // ✅ Include category info
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        title: "asc",
+      },
+    });
+
+    res.status(200).json(products);
+  } catch (err) {
+    console.error("Error fetching product list:", err);
+    res.status(500).json({ message: "Error fetching product list" });
+  }
+});
+
+
+// Move multiple products to a category
+const moveProductsToCategory = asyncHandler(async (req, res) => {
+  const { productIds, categoryId } = req.body;
+
+  if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+    throw new AppError("Product IDs are required", 400);
+  }
+
+  let targetCategory;
+  let targetCategoryId = categoryId;
+
+  if (categoryId === null || typeof categoryId === 'undefined') {
+    // Find or create "General Collection" by name
+    targetCategory = await prisma.category.findFirst({
+      where: { name: "General Collection" }
+    });
+
+    if (!targetCategory) {
+      targetCategory = await prisma.category.create({
+        data: { name: "General Collection" }
+      });
+    }
+
+    targetCategoryId = targetCategory.id;
+  } else {
+    // Move to specified category if categoryId provided
+    targetCategory = await prisma.category.findUnique({
+      where: { id: categoryId }
+    });
+    if (!targetCategory) {
+      throw new AppError("Target category not found", 404);
+    }
+  }
+
+  const existingProducts = await prisma.product.findMany({
+    where: { id: { in: productIds } },
+    select: { id: true }
+  });
+
+  const existingIds = existingProducts.map(p => p.id);
+  if (existingIds.length === 0) {
+    throw new AppError("No valid products found", 404);
+  }
+
+  // Set categoryId to General Collection or specified category
+  await prisma.product.updateMany({
+    where: { id: { in: existingIds } },
+    data: { categoryId: targetCategoryId }
+  });
+
+  return res.status(200).json({
+    message: `${existingIds.length} product(s) moved to category "${targetCategory.name}"`,
+  });
+});
+
+
+
+// Get products split by category membership
+const getProductsSplitByCategory = asyncHandler(async (req, res) => {
+  const { categoryId } = req.params;
+
+  if (!categoryId) throw new AppError("Category ID is required", 400);
+
+  // Products in this category
+  const inCategory = await prisma.product.findMany({
+    where: { categoryId },
+    include: { category: { select: { id: true, name: true } } },
+  });
+
+  // Products not in this category
+  const notInCategory = await prisma.product.findMany({
+  where: {
+    categoryId: { not: categoryId },
+  },
+  include: {
+    category: {
+      select: { id: true, name: true },
+    },
+  },
+});
+
+
+  res.status(200).json({ inCategory, notInCategory });
+});
+
 
 
 module.exports = {
@@ -457,4 +603,7 @@ module.exports = {
   searchProducts,
   getProductById,
   getProductsByCategoryId,
+  getProductList,
+  moveProductsToCategory,
+  getProductsSplitByCategory,
 };

@@ -128,7 +128,7 @@ app.use("/api/products", productLimiter);
 app.use("/api/users/email", authLimiter); // For login attempts via email lookup
 
 // Apply admin rate limiting to admin routes
-app.use("/api/users", adminLimiter); // Admin user management
+app.use("/api/admin", adminLimiter); // Admin user management
 app.use("/api/cart",cartRouter);
 app.use("/api/products", productsRouter);
 app.use("/api/categories", categoryRouter);

@@ -10,7 +10,7 @@ const { identifier } = require("../middleware/indentifier.js"); // 👈 Import m
 const router = express.Router();
 
 // 🧱 Protect all routes using JWT middleware
-router.use(identifier);
+// router.use(identifier);
 
 // 🧾 Get all addresses for a specific user
 router.get("/:userId", getAddressesByUserId);

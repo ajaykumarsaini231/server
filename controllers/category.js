@@ -4,7 +4,7 @@ const { asyncHandler, AppError } = require("../utills/errorHandler");
 
 const createCategory = asyncHandler(async (request, response) => {
   const { name } = request.body;
-
+  console.log(name)
   if (!name || name.trim().length === 0) {
     throw new AppError("Category name is required", 400);
   }
@@ -59,33 +59,39 @@ const deleteCategory = asyncHandler(async (request, response) => {
   }
 
   const existingCategory = await prisma.category.findUnique({
-    where: {
-      id: id,
-    },
+    where: { id },
   });
 
   if (!existingCategory) {
     throw new AppError("Category not found", 404);
   }
 
-  // Check if category has products
-  const productsWithCategory = await prisma.product.findFirst({
-    where: {
-      categoryId: id,
-    },
+  // Find or create the "General" category
+  let generalCategory = await prisma.category.findFirst({
+    where: { name: "General" },
   });
 
-  if (productsWithCategory) {
-    throw new AppError("Cannot delete category that has products", 400);
+  if (!generalCategory) {
+    generalCategory = await prisma.category.create({
+      data: { name: "General" },
+    });
   }
 
-  await prisma.category.delete({
-    where: {
-      id: id,
-    },
+  // Move all products from this category to General
+  await prisma.product.updateMany({
+    where: { categoryId: id },
+    data: { categoryId: generalCategory.id },
   });
-  return response.status(204).send();
+
+  // Optional: clear category name instead of deleting
+  await prisma.category.update({
+    where: { id },
+    data: { name: "Deleted Category" }, // or "" if you want blank
+  });
+
+  return response.status(200).json({ message: "Category removed and products moved to General" });
 });
+
 
 const getCategory = asyncHandler(async (request, response) => {
   const { id } = request.params;

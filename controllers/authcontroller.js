@@ -675,15 +675,25 @@ exports.verify = async (req, res) => {
 
 const cleanExpiredPendingUsers = async () => {
   try {
+    const now = new Date();
+
+    // 30 minutes ago
+    const thirtyMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+
     const result = await prisma.pendingUser.deleteMany({
-      where: { otpExpiry: { lt: new Date() } },
+      where: {
+        createdAt: { lt: thirtyMinutesAgo },
+      },
     });
-    if (result.count > 0)
-      console.log(`🧹 Cleaned ${result.count} expired pending users`);
+
+    if (result.count > 0) {
+      console.log(`🧹 Cleaned ${result.count} expired pending users (older than 30 minutes)`);
+    }
   } catch (err) {
     console.error("❌ Cleanup failed:", err);
   }
 };
 
-// Run every hour
-setInterval(cleanExpiredPendingUsers, 30 * 60 * 1000);
+// 🕒 Run every 30 minutes
+setInterval(cleanExpiredPendingUsers, 15 * 60 * 1000);
+
