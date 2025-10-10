@@ -74,38 +74,29 @@ const allowedOrigins = [
   'http://localhost:3001',
   process.env.NEXTAUTH_URL,
   process.env.FRONTEND_URL,
-].filter(Boolean); // Remove undefined values
+].filter(Boolean);
 
-// CORS configuration with origin validation
 const corsOptions = {
   origin: function (origin, callback) {
-
     if (!origin) return callback(null, true);
-    
 
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
+    if (allowedOrigins.includes(origin)) return callback(null, true);
 
     if (process.env.NODE_ENV === 'development' && origin.startsWith('http://localhost:')) {
       return callback(null, true);
     }
 
-app.use(cors({
-  origin: ["http://localhost:3000"], // frontend origin
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true
-}));
-
-    // Reject other origins
     const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
     return callback(new Error(msg), false);
   },
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true, // Allow cookies and authorization headers
+  credentials: true,
 };
+
+app.use(cors(corsOptions));
+
+app.options('*', cors(corsOptions));
 
 // Apply general rate limiting to all routes
 app.use(generalLimiter);
