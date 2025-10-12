@@ -77,12 +77,11 @@ FRONTEND_URL=[https://client-delta-brown.vercel.app/](https://client-delta-brown
 
 ### 4\. Run The Server
 
-```bash
+
 npm start      # Production
 npm run dev    # Development (nodemon)
 
 
------
 
 ## Environment Variables
 
@@ -186,5 +185,4 @@ MIT
 
 -----
 
-```
-```
+
