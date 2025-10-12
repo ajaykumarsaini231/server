@@ -77,16 +77,33 @@ NODE_CODE_SENDING_EMAIL_ADDRESS=youremail@example.com
 NODE_CODE_SENDING_EMAIL_ADDRESS_PASSWORD=your_email_password
 HMAC_VARIFICATION_CODE_SECRET=yourHmacSecret
 Secret_Token=yourJWTSecret
-NEXTAUTH_URL=[https://client-delta-brown.vercel.app](https://client-delta-brown.vercel.app)
-FRONTEND_URL=[https://client-delta-brown.vercel.app/](https://client-delta-brown.vercel.app/)
+NEXTAUTH_URL=frontend url 
+FRONTEND_URL=frontend url
 ```
 
 ### 4\. Run The Server
 
-```bash
-npm start      # Production
-```
+## Available Scripts
 
+5. Install dependencies in the server folder:
+    ```
+    cd server
+    npm install
+    ```
+6. Run Prisma migration:
+    ```
+    npx prisma migrate dev
+    ```
+7. Insert demo data:
+    ```
+    cd utills
+    node insertDemoData.js
+    cd ..
+    ```
+8. Start the backend:
+    ```
+    node app.js
+    ```
 
 ## Environment Variables
 
@@ -103,13 +120,7 @@ npm start      # Production
 
 -----
 
-## Available Scripts
 
-  - `npm start` — Start server (production)
-  - `npm run dev` — Start server in watch mode (dev)
-  - `npm test` — Run backend tests
-  - `node scripts/backup-database.js` — Backup DB
-  - `node scripts/migration-validator.js` — Validate migrations
 
 -----
 
