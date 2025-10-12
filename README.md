@@ -1,6 +1,12 @@
 
 # Dreamora Express.js E-Commerce Backend
 
+> **Backend Live API on:** [https://server-qfd2.onrender.com](https://server-qfd2.onrender.com)
+
+
+_Shop smarter, live better – Dreamora brings you the future of online shopping._
+
+
 <img width="2048" height="2048" alt="image" src="https://github.com/user-attachments/assets/f3eed615-2116-434b-ae02-2654796e9f63" />
 
 
