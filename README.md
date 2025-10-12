@@ -1,8 +1,8 @@
 
 # Dreamora Express.js E-Commerce Backend
 
-![Project Banner](./public/assets/your-banner.png)
-*Replace with your own image path or remove if not needed.*
+<img width="2048" height="2048" alt="image" src="https://github.com/user-attachments/assets/f3eed615-2116-434b-ae02-2654796e9f63" />
+
 
 ---
 
@@ -77,10 +77,9 @@ FRONTEND_URL=[https://client-delta-brown.vercel.app/](https://client-delta-brown
 
 ### 4\. Run The Server
 
-
+```bash
 npm start      # Production
-npm run dev    # Development (nodemon)
-
+```
 
 
 ## Environment Variables
