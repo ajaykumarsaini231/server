@@ -1,17 +1,14 @@
 const prisma = require("../utills/db");
 const bcrypt = require("bcryptjs");
 const { asyncHandler, AppError } = require("../utills/errorHandler");
+const jwt = require("jsonwebtoken");
 
-/** 🧩 Helper: Exclude password field */
 function excludePassword(user) {
   if (!user) return user;
   const { password, ...rest } = user;
   return rest;
 }
 
-/**
- * ✅ Get All Users (Admin Only)
- */
 const getAllUsers = asyncHandler(async (req, res) => {
   const users = await prisma.user.findMany({
     include: {
@@ -38,9 +35,6 @@ const getAllUsers = asyncHandler(async (req, res) => {
   res.status(200).json(usersWithoutPasswords);
 });
 
-/**
- * ✅ Create User (Public)
- */
 const createUser = asyncHandler(async (req, res) => {
   const { email, password, name, role, photoUrl } = req.body;
 
@@ -74,7 +68,7 @@ const createUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * ✅ Update User (Admin or self)
+ * Update User (Admin or self)
  */
 const updateUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -132,9 +126,6 @@ const updateUser = asyncHandler(async (req, res) => {
   res.status(200).json(excludePassword(updatedUser));
 });
 
-/**
- * ✅ Delete User (Admin)
- */
 const deleteUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -148,10 +139,6 @@ const deleteUser = asyncHandler(async (req, res) => {
   res.status(204).send();
 });
 
-/**
- * ✅ Get User By ID (Admin)
- * Returns full profile with relations
- */
 const getUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -159,7 +146,13 @@ const getUser = asyncHandler(async (req, res) => {
 
   const user = await prisma.user.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true,
+      name: true,      
+      email: true,     
+      role: true,
+      verified: true,
+      photoUrl: true,
       Wishlist: {
         include: { product: true },
       },
@@ -181,11 +174,12 @@ const getUser = asyncHandler(async (req, res) => {
 
   if (!user) throw new AppError("User not found", 404);
 
-  res.status(200).json(excludePassword(user));
+  res.status(200).json(user); // password is not selected, so no need to exclude
 });
 
+
 /**
- * ✅ Get User by Email (Public)
+ *  Get User by Email (Public)
  */
 const getUserByEmail = asyncHandler(async (req, res) => {
   const { email } = req.params;
@@ -220,31 +214,21 @@ const getUserByEmail = asyncHandler(async (req, res) => {
 });
 
 /**
- * ✅ Get Current Logged-in User
+ *  Get Current Logged-in User
  */
 const getCurrentUser = asyncHandler(async (req, res) => {
-  const userId = req.user?.id;
+  const userId = req.user?.userId || req.userId; 
   if (!userId) throw new AppError("Unauthorized", 401);
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: {
-      Wishlist: {
-        include: { product: true },
-      },
-      Cart: {
-        include: { product: true },
-      },
-      addresses: true,
-      orders: {
-        include: {
-          products: {
-            include: {
-              product: true,
-            },
-          },
-        },
-      },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      verified: true,
+      photoUrl: true,
     },
   });
 
@@ -252,30 +236,32 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    user: excludePassword(user),
+    user, 
   });
 });
 
-const updateCurrentUser = asyncHandler(async (req, res) => {
-  const userId = req.user?.id; // set by identifier middleware
-  if (!userId) throw new AppError("Unauthorized", 401);
 
+const updateCurrentUser = asyncHandler(async (req, res) => {
+  const userId = req.user?.id || req.user?.userId;
   const { name, currentPassword, newPassword, photoUrl } = req.body;
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) throw new AppError("User not found", 404);
+  if (!userId) throw new AppError("Unauthorized", 401);
+
+  const existingUser = await prisma.user.findUnique({ where: { id: userId } });
+  if (!existingUser) throw new AppError("User not found", 404);
 
   const updateData = {};
   if (name) updateData.name = name;
   if (photoUrl) updateData.photoUrl = photoUrl;
 
-  // Handle password change
   if (newPassword) {
-    if (!currentPassword)
-      throw new AppError("Current password is required", 400);
+    if (!currentPassword) throw new AppError("Current password required", 400);
 
-    const isValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isValid) throw new AppError("Current password is incorrect", 400);
+    const isMatch = await bcrypt.compare(currentPassword, existingUser.password);
+    if (!isMatch) throw new AppError("Current password is incorrect", 401);
+
+    if (newPassword.length < 8)
+      throw new AppError("Password must be at least 8 characters long", 400);
 
     updateData.password = await bcrypt.hash(newPassword, 14);
   }
@@ -283,17 +269,61 @@ const updateCurrentUser = asyncHandler(async (req, res) => {
   const updatedUser = await prisma.user.update({
     where: { id: userId },
     data: updateData,
-    include: {
-      Wishlist: { include: { product: true } },
-      Cart: { include: { product: true } },
-      addresses: true,
-      orders: { include: { products: { include: { product: true } } } },
-    },
   });
 
-  const { password, ...userData } = updatedUser;
-  res.status(200).json({ success: true, user: userData });
+  res.status(200).json({
+    success: true,
+    message: "User updated successfully",
+    user: {
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      photoUrl: updatedUser.photoUrl,
+      role: updatedUser.role,
+      verified: updatedUser.verified,
+    },
+  });
 });
+
+
+
+const deleteCurrentUser = async (req, res) => {
+  try {
+    //  Extract token from header or cookie
+    const authHeader = req.headers.authorization || req.cookies.Authorization;
+
+    if (!authHeader)
+      return res.status(401).json({ success: false, message: "No token provided" });
+
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : authHeader;
+
+    //  Verify token
+    const decoded = jwt.verify(token, process.env.Secret_Token);
+
+    if (!decoded || !decoded.userId)
+      return res.status(401).json({ success: false, message: "Invalid token" });
+
+    //  Delete the logged-in user
+    await prisma.user.delete({
+      where: { id: decoded.userId },
+    });
+
+    // Optionally, clear any sessions or cookies
+    res.clearCookie("Authorization");
+
+    return res.status(204).json({ success: true, message: "User deleted successfully" });
+  } catch (error) {
+    console.error("❌ Error deleting current user:", error);
+
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({ success: false, message: "Invalid or expired token" });
+    }
+
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
 
 
 
@@ -306,5 +336,5 @@ module.exports = {
   getUser,
   getAllUsers,
   getUserByEmail,
-  getCurrentUser,
+  deleteCurrentUser,
 };

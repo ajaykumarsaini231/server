@@ -1,9 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
-/**
- * 🧾 Get all addresses for a user
- */
 export const getAddressesByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -20,9 +17,6 @@ export const getAddressesByUserId = async (req, res) => {
   }
 };
 
-/**
- * ➕ Create a new address
- */
 export const createAddress = async (req, res) => {
   try {
     const {
@@ -76,9 +70,6 @@ export const createAddress = async (req, res) => {
   }
 };
 
-/**
- * ✏️ Update an existing address
- */
 export const updateAddress = async (req, res) => {
   try {
     const { id } = req.params;
@@ -108,9 +99,6 @@ export const updateAddress = async (req, res) => {
   }
 };
 
-/**
- * 🗑️ Delete address
- */
 export const deleteAddress = async (req, res) => {
   try {
     const { id } = req.params;

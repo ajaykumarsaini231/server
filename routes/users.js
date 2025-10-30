@@ -1,41 +1,42 @@
 const express = require('express');
 const router = express.Router();
 
-const { identifier } = require("../middleware/indentifier.js");  // 👤 Normal user check
-const { adminIdentifier } = require("../middleware/adminIdentifier.js"); // 🛡️ Admin-only check
+const { identifier } = require("../middleware/indentifier.js");
+const { adminIdentifier } = require("../middleware/adminIdentifier.js");
 
 const {
   getUser,
   createUser,
   updateUser,
   deleteUser,
-  getAllUsers, 
+  getAllUsers,
   getUserByEmail,
   getCurrentUser,
   updateCurrentUser,
+  deleteCurrentUser,
 } = require('../controllers/users');
 
-/**
- * 🟢 Public Routes
- * - Signup and basic fetch by email (no login required)
- */
+//  Public Routes
 router.post("/", createUser);
 router.get("/email/:email", getUserByEmail);
 
-/**
- * 🧩 Authenticated User Routes
- * - Requires a valid token
-//  */
-router.get("/currnet/:userId", identifier, getCurrentUser);
-// router.get("/", identifier, getCurrentUser);
+// router.get("/me",  getCurrentUser);
+// router.put("/me/:id",  updateCurrentUser);
+// router.get("/me",  deleteCurrentUser);
 
+//  Authenticated User Routes
+router.get("/me", identifier, getCurrentUser);
 router.put("/me", identifier, updateCurrentUser);
+router.delete("/me", identifier, deleteCurrentUser);
 
-// router.get("/",  getAllUsers);
-// router.get("/:id",  getUser);
-// router.put("/:id",  updateUser);
-// router.delete("/:id",  deleteUser);
 
+// // router.get("/",  getAllUsers);
+// router.get("/me/:id",  getUser);
+// router.put("/me/:id",  updateUser);
+// router.delete("/me/:id",  deleteUser);
+
+
+//  Admin Routes
 router.get("/", adminIdentifier, getAllUsers);
 router.get("/:id", adminIdentifier, getUser);
 router.put("/:id", adminIdentifier, updateUser);

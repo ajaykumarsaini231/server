@@ -134,7 +134,6 @@ exports.verifyOtp = async (req, res) => {
     if (!pendingUser)
       return res.status(404).json({ success: false, message: "No pending signup found" });
 
-    // ✅ Hash user-provided OTP to compare securely
     const hashedInputOtp = hmacProcess(otp, process.env.HMAC_VARIFICATION_CODE_SECRET);
 
     if (pendingUser.otp !== hashedInputOtp)
@@ -156,34 +155,48 @@ exports.verifyOtp = async (req, res) => {
     // Delete pending record
     await prisma.pendingUser.delete({ where: { email } });
 
-    // Generate JWT
-    const token = jwt.sign(
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (!existingUser) {
+      return res.status(401).json({
+        success: false,
+        message: "This user does not singup pls try again later",
+      });
+    }
+       const token = jwt.sign(
       {
-        userId: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        verified: true,
-        role: newUser.role,
+        userId: existingUser.id,
+        name: existingUser.name,
+        email: existingUser.email,
+        verified: existingUser.verified,
+        role: existingUser.role, 
       },
       process.env.Secret_Token,
       { expiresIn: "8h" }
     );
 
-    res.json({
-      success: true,
-      message: "OTP verified successfully. Account activated!",
-      token,
-      user: {
-        name: newUser.name,
-        email: newUser.email,
-        photoUrl: newUser.photoUrl || null,
-      },
-    });
+    res
+      .cookie("Authorization", "Bearer " + token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "Lax",
+        maxAge: 8 * 3600000,
+      })
+      .json({
+        success: true,
+        token,
+        user: {
+          name: existingUser.name,
+          email: existingUser.email,
+          photoUrl: existingUser.photoUrl || "/default-avatar.png",
+        },
+        message: "Logged in successfully",
+      });
   } catch (err) {
-    console.error("❌ OTP verification error:", err);
+    console.error(err);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
+
 
 // =============== RESEND SIGNUP OTP ===============
 exports.resendSignupOtp = async (req, res) => {
@@ -306,7 +319,7 @@ exports.signin = async (req, res) => {
         name: existingUser.name,
         email: existingUser.email,
         verified: existingUser.verified,
-        role: existingUser.role, // ✅ read role directly from DB
+        role: existingUser.role, 
       },
       process.env.Secret_Token,
       { expiresIn: "8h" }
